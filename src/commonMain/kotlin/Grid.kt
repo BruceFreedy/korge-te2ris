@@ -37,10 +37,10 @@ class Grid(
     fun sizeGrid() {
         pointX = stage.width / 4
         pointY = stage.height / 4
-        width = pointX * 3
-        height = pointY * 3
-        xSize = (stage.width / 2) / xAmount
-        ySize = (stage.height / 2) / yAmount
+        width = (stage.width/2 + pointX)
+        height = (stage.height/2 + pointY)
+        xSize = (width - pointX) / xAmount
+        ySize = (height - pointY) / yAmount
     }
 
     fun drawGrid() {

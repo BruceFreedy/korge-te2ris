@@ -7,8 +7,8 @@ import com.soywiz.korge.view.addUpdater
 import com.soywiz.korim.color.Colors
 
 suspend fun main() = Korge(
-	width = 300,
-	height = 900,
+	width = 400,
+	height = 800,
 	bgcolor = Colors["#000000"],
 	title = "Te2ris",
 	iconPath = "icon.png"
