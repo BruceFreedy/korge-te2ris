@@ -1,26 +1,69 @@
-import com.soywiz.klock.*
-import com.soywiz.korge.*
-import com.soywiz.korge.tween.*
-import com.soywiz.korge.view.*
-import com.soywiz.korim.color.*
-import com.soywiz.korim.format.*
-import com.soywiz.korio.file.std.*
-import com.soywiz.korma.geom.*
-import com.soywiz.korma.interpolation.*
+import com.soywiz.klock.PerformanceCounter
+import com.soywiz.korev.Key
+import com.soywiz.korge.Korge
+import com.soywiz.korge.component.onStageResized
+import com.soywiz.korge.input.keys
+import com.soywiz.korge.view.addUpdater
+import com.soywiz.korim.color.Colors
 
-suspend fun main() = Korge(width = 512, height = 512, bgcolor = Colors["#2b2b2b"]) {
-	val minDegrees = (-16).degrees
-	val maxDegrees = (+16).degrees
+suspend fun main() = Korge(
+	width = 300,
+	height = 900,
+	bgcolor = Colors["#000000"],
+	title = "Te2ris",
+	iconPath = "icon.png"
+) {
 
-	val image = image(resourcesVfs["korge.png"].readBitmap()) {
-		rotation = maxDegrees
-		anchor(.5, .5)
-		scale(.8)
-		position(256, 256)
+	val grid = Grid(this)
+	onStageResized { _, _ ->
+		grid.sizeGrid()
 	}
 
-	while (true) {
-		image.tween(image::rotation[minDegrees], time = 1.seconds, easing = Easing.EASE_IN_OUT)
-		image.tween(image::rotation[maxDegrees], time = 1.seconds, easing = Easing.EASE_IN_OUT)
+
+	root.keys.down {
+		grid.apply {
+			when (it.key) {
+				Key.LEFT -> {
+					currentBlock.point.x -= 1
+					if (isOverLap(currentBlock)) {
+						currentBlock.point.x += 1
+					}
+					draw()
+				}
+				Key.RIGHT -> {
+					currentBlock.point.x += 1
+					if (isOverLap(currentBlock)) {
+						currentBlock.point.x -= 1
+					}
+					draw()
+				}
+				Key.SPACE, Key.UP -> {
+					currentBlock.dir += 1
+					if (isOverLap(currentBlock)) {
+						currentBlock.dir -= 1
+					}
+					draw()
+				}
+				Key.DOWN -> {
+					downToFinal()
+				}
+				else -> Unit
+			}
+		}	}
+
+
+	var time_stamp = PerformanceCounter.milliseconds
+	fun getPeriod() = PerformanceCounter.milliseconds - time_stamp
+
+	addUpdater {
+		if (getPeriod() < 300) return@addUpdater
+		time_stamp = PerformanceCounter.milliseconds
+		if (input.keys.pressing(Key.DOWN)) grid.toDown()
+		grid.toDown()
 	}
+
+
 }
+
+
+
