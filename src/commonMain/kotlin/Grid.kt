@@ -117,9 +117,17 @@ class Grid(
         return res
     }
 
-    fun newRandomBlock(grid: Grid = this, blockDef: BlockDef = randomBlockDef(queue)): Block {
-        return Block(blockDef, PointInt(grid.xAmount/2, 0)).apply { blocks.add(this); }
+    fun resetMap() {
+        blocks = ArrayList()
     }
+
+    fun newRandomBlock(grid: Grid = this, blockDef: BlockDef = randomBlockDef(queue)) =
+        Block(blockDef, PointInt(grid.xAmount/2, 0)).apply {
+            if(isOverLap(this)) {
+                resetMap()
+            }
+            blocks.add(this)
+        }
 
     fun strikeLine() {
         val map = HashMap<Int, Int>()
@@ -167,11 +175,4 @@ class Block(
         newTiles.fastForEach { x, y -> tiles.add(x, y) }
     }
 
-/*
-    fun spin(dir: Int = -1) {
-        val tiles = PointIntArrayList()
-        this.tiles.fastForEach { x, y -> tiles.add(y * dir, x * -dir) }
-        this.tiles = tiles
-    }
-*/
 }
