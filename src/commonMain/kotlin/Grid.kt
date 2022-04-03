@@ -1,12 +1,8 @@
 import com.soywiz.kds.Queue
-import com.soywiz.korge.view.Stage
-import com.soywiz.korge.view.line
-import com.soywiz.korge.view.position
-import com.soywiz.korge.view.solidRect
-import com.soywiz.korim.color.Colors
+import com.soywiz.kds.iterators.fastForEach
+import com.soywiz.korge.view.*
 import com.soywiz.korim.color.RGBA
 import com.soywiz.korio.concurrent.atomic.KorAtomicBoolean
-import com.soywiz.korio.lang.currentThreadId
 import com.soywiz.korma.geom.Point
 import com.soywiz.korma.geom.PointInt
 import com.soywiz.korma.geom.PointIntArrayList
@@ -16,6 +12,15 @@ class Grid(
     var blocks: ArrayList<Block> = ArrayList(),
     var queue: Queue<BlockDef> = Queue(),
 ) {
+    var props = ArrayList<View>()
+
+    fun View.addProps() {
+        this@Grid.props.add(this)
+    }
+    fun clearProps() {
+        props.fastForEach { it.removeFromParent() }
+        props = ArrayList()
+    }
 
     var currentBlock: Block
     //draw board
@@ -46,8 +51,8 @@ class Grid(
     fun drawGrid() {
         for (y in 0..yAmount) {
             for (x in 0..xAmount)
-                stage.line(Point(pointX + x * xSize, pointY), Point(pointX + x * xSize, height))
-            stage.line(Point(pointX, pointY + y * ySize), Point(width, pointY + y * ySize))
+                stage.line(Point(pointX + x * xSize, pointY), Point(pointX + x * xSize, height)).addProps()
+            stage.line(Point(pointX, pointY + y * ySize), Point(width, pointY + y * ySize)).addProps()
         }
     }
 
@@ -56,7 +61,7 @@ class Grid(
         stage.solidRect(xSize, ySize, color).position(
             pointX + point.x * xSize,
             pointY + point.y * ySize
-        )
+        ).addProps()
     }
 
     fun toDown() {
@@ -65,20 +70,22 @@ class Grid(
             currentBlock.point.y -= 1
             currentBlock = newRandomBlock(this, randomBlockDef(queue))
         }
-        stage.draw()
+        strikeLine()
+        draw()
     }
 
     fun downToFinal() {
-            while (!isOverLap(currentBlock)) currentBlock.point.y += 1
-            currentBlock.point.y -= 1
-            currentBlock = newRandomBlock(this, randomBlockDef(queue))
-            stage.draw()
+        while (!isOverLap(currentBlock)) currentBlock.point.y += 1
+        currentBlock.point.y -= 1
+        currentBlock = newRandomBlock(this, randomBlockDef(queue))
+        strikeLine()
+        draw()
     }
 
-    fun Stage.draw() {
-        solidRect(width, height, Colors["#000000"]).position(0, 0)
-        drawGrid()
+    fun draw() {
+        clearProps()
         blocks.forEach { block -> block.eachTile { draw(it, block.color) } }
+        drawGrid()
     }
 
     fun isOverLap(block: Block): Boolean {
@@ -114,7 +121,19 @@ class Grid(
         return Block(blockDef, PointInt(grid.xAmount/2, 0)).apply { blocks.add(this); }
     }
 
-
+    fun strikeLine() {
+        val map = HashMap<Int, Int>()
+        blocks.forEach { block -> block.eachTile { map[it.y] = (map[it.y]?: 0) + 1 } }
+        val striked = map.filter { entry -> entry.value >= xAmount }.toList()
+        blocks.forEach { block ->
+            block.replaceTileIf { origin, point ->
+                if (striked.any { it.first == point.y }) null
+                else origin.apply {
+                    y += striked.count { it.first >= point.y }
+                }
+            }
+        }
+    }
 
 }
 
@@ -127,13 +146,27 @@ class Block(
         set(value) {
             field = value%4
         }
-    val tiles get() = block.dirTiles[dir]
+    val dirTiles = ArrayList<PointIntArrayList>().apply {  //clone PointIntArrayList
+        block.dirTiles.fastForEach { add(PointIntArrayList().apply { it.fastForEach { x, y -> add(x, y) } }) }
+    }
+    val tiles get() = dirTiles[dir]
 
     fun eachTile(consumer: (PointInt) -> Unit) {
         tiles.fastForEach { x, y ->
             consumer.invoke(PointInt(point.x + x, point.y + y))
         }
     }
+
+
+    fun replaceTileIf(function: (origin: PointInt, point: PointInt) -> PointInt?) {
+        val newTiles = PointIntArrayList()
+        tiles.fastForEach { x, y ->
+            function.invoke(PointInt(x, y), PointInt(point.x + x, point.y + y))?.let { newTiles.add(it) }
+        }
+        tiles.clear()
+        newTiles.fastForEach { x, y -> tiles.add(x, y) }
+    }
+
 /*
     fun spin(dir: Int = -1) {
         val tiles = PointIntArrayList()

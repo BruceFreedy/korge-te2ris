@@ -2,7 +2,7 @@ import com.soywiz.klock.PerformanceCounter
 import com.soywiz.korev.Key
 import com.soywiz.korge.Korge
 import com.soywiz.korge.component.onStageResized
-import com.soywiz.korge.input.keys
+import com.soywiz.korge.view.Stage
 import com.soywiz.korge.view.addUpdater
 import com.soywiz.korim.color.Colors
 
@@ -19,51 +19,49 @@ suspend fun main() = Korge(
 		grid.sizeGrid()
 	}
 
-
-	root.keys.down {
-		grid.apply {
-			when (it.key) {
-				Key.LEFT -> {
-					currentBlock.point.x -= 1
-					if (isOverLap(currentBlock)) {
-						currentBlock.point.x += 1
-					}
-					draw()
-				}
-				Key.RIGHT -> {
-					currentBlock.point.x += 1
-					if (isOverLap(currentBlock)) {
-						currentBlock.point.x -= 1
-					}
-					draw()
-				}
-				Key.SPACE, Key.UP -> {
-					currentBlock.dir += 1
-					if (isOverLap(currentBlock)) {
-						currentBlock.dir -= 1
-					}
-					draw()
-				}
-				Key.DOWN -> {
-					downToFinal()
-				}
-				else -> Unit
-			}
-		}	}
-
-
 	var time_stamp = PerformanceCounter.milliseconds
 	fun getPeriod() = PerformanceCounter.milliseconds - time_stamp
 
 	addUpdater {
+		grid.apply {
+			if (pressed(Key.A, Key.LEFT)) {
+				currentBlock.point.x -= 1
+				if (isOverLap(currentBlock)) {
+					currentBlock.point.x += 1
+				}
+				draw()
+				return@addUpdater
+			} else if (pressed(Key.D, Key.RIGHT)) {
+				currentBlock.point.x += 1
+				if (isOverLap(currentBlock)) {
+					currentBlock.point.x -= 1
+				}
+				draw()
+				return@addUpdater
+			} else if (pressed(Key.W, Key.UP)) {
+				currentBlock.dir += 1
+				if (isOverLap(currentBlock)) {
+					currentBlock.dir -= 1
+				}
+				draw()
+				return@addUpdater
+			} else if (pressed(Key.S, Key.DOWN)) {
+				downToFinal()
+				return@addUpdater
+			} else if (pressing(Key.R, Key.LEFT_CONTROL)) {
+				grid.blocks = ArrayList()
+				grid.currentBlock = newRandomBlock()
+				draw()
+			}
+		}
 		if (getPeriod() < 300) return@addUpdater
 		time_stamp = PerformanceCounter.milliseconds
-		if (input.keys.pressing(Key.DOWN)) grid.toDown()
 		grid.toDown()
 	}
 
-
 }
 
+fun Stage.pressed(vararg key: Key) = key.any { input.keys.justPressed(it) }
+fun Stage.pressing(vararg key: Key) = key.all { input.keys.pressing(it) }
 
 
